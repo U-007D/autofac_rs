@@ -66,6 +66,9 @@ impl<T: IOutput> IDateWriter for TodayWriter<T> {
 }
 
 pub fn run(args: Vec<String>) -> result::Result<(), Box<error::Error>> {
-    TodayWriter::new(ConsoleOutput).write_date();
+    let container = ContainerBuilder::new().register_type<ConsoleOutput>().as<IOutput>()
+                                           .register_type<TodayWriter>().as<IDateWriter>()
+                                           .build();
+    container.resolve<IDateWriter>().write_date();
     Ok(())
 }
