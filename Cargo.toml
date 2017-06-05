@@ -1,9 +1,11 @@
 [package]
 name = "autofac_rs"
 version = "0.1.0"
-authors = ["bRad <brad@humanenginuity.com>"]
+authors = ["bRad <brad@humanenginuity.com>", "Boris <boris@humanenginuity.com>"]
 
 [dependencies]
+he_di = { version = "0.1", path = "../../he-di/he_di" } # adapt path 
+unsafe-any = "0.4"
 
 [profile.release]
 opt-level = 3

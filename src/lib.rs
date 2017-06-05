@@ -1,35 +1,29 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![allow(non_camel_case_types)]
-#![warn(missing_debug_implementations, missing_copy_implementations, trivial_casts, trivial_numeric_casts, unused_import_braces, unused_qualifications)]
-#![deny(unused_must_use, overflowing_literals)]
+//! Examples based on AutoFac 'getting started' example
+//! (http://autofac.readthedocs.io/en/latest/getting-started/index.html)
+extern crate he_di;
 
-use std::{result, error};
-mod consts;
-use consts::msgs;
+use he_di::{ ContainerBuilder };
+use std::error::Error;
 
-#[cfg(test)]
-mod unit_tests;
-
-// This interface helps decouple the concept of
-// "writing output" from the Console class. We
-// don't really "care" how the Write operation
-// happens, just that we can write.
-pub trait IOutput
-{
-    fn write<T: Into<String>>(&self, content: T);
+trait IOutput {
+    fn write(&self, content: String);
 }
 
-// This implementation of the IOutput interface
-// is actually how we write to the Console. Technically
-// we could also implement IOutput to write to Debug
-// or Trace... or anywhere else.
-pub struct ConsoleOutput;
+/// This implementation of the IOutput interface
+/// is actually how we write to the Console. Technically
+/// we could also implement IOutput to write to Debug
+/// or Trace... or anywhere else.
+struct ConsoleOutput {}
 
-impl IOutput for ConsoleOutput
-{
-    fn write<T: Into<String>>(&self, content: T) {
-        println!("{}", content.into());
+impl ConsoleOutput {
+    fn new() -> ConsoleOutput {
+        ConsoleOutput {}
+    }
+}
+
+impl IOutput for ConsoleOutput {
+    fn write(&self, content: String) {
+        println!("{}", content);
     }
 }
 
@@ -37,8 +31,7 @@ impl IOutput for ConsoleOutput
 // a date from the actual mechanism that performs
 // the writing. Like with IOutput, the process
 // is abstracted behind an interface.
-pub trait IDateWriter
-{
+trait IDateWriter {
     fn write_date(&self);
 }
 
@@ -49,23 +42,103 @@ pub trait IDateWriter
 // WriteDate such that today's date is written out;
 // you could have one that writes in a different format
 // or a different date.
-struct TodayWriter<T: IOutput> {
-    output: T,
+struct BoxedTodayWriter {
+    output: Box<IOutput>,
 }
 
-impl<T: IOutput> TodayWriter<T> {
-    fn new(output: T) -> TodayWriter<T> {
-        TodayWriter::<T> { output: output }
+impl BoxedTodayWriter {
+    pub fn new<O: IOutput + 'static>(output: O) -> Self {
+        BoxedTodayWriter { output: Box::new(output) }
     }
 }
 
-impl<T: IOutput> IDateWriter for TodayWriter<T> {
+impl IDateWriter for BoxedTodayWriter {
     fn write_date(&self) {
-        self.output.write("Today is June 4th, 2017")
+        self.output.write("BoxedTodayWriter says that today is June 5th".to_string());
     }
 }
 
-pub fn run(args: Vec<String>) -> result::Result<(), Box<error::Error>> {
-    TodayWriter::new(ConsoleOutput).write_date();
+struct GenericTodayWriter<O: IOutput> {
+    output: O,
+}
+
+impl<O: IOutput> GenericTodayWriter<O> {
+    pub fn new(output: O) -> Self {
+        GenericTodayWriter { output: output }
+    }
+}
+
+impl<O: IOutput> IDateWriter for GenericTodayWriter<O> {
+    fn write_date(&self) {
+        self.output.write("GenericTodayWriter says that today is June 5th".to_string());
+    }
+}
+
+// =======================================================================
+// Code to be generated when calling `#[derive(Component)]`
+use std::collections::BTreeMap;
+
+use he_di::component::{ Component, ComponentIndex };
+use he_di::Object;
+use he_di::util::*;
+
+extern crate unsafe_any;
+use unsafe_any::UnsafeAnyExt;
+
+impl Component for ConsoleOutput {
+    fn get_index(&self) -> ComponentIndex {
+        unimplemented!()
+    }
+
+    fn get_arguments(&self) -> &[ComponentIndex] {
+        unimplemented!()
+    }
+}
+
+struct BoxedTodayWriter__DI_Builder {}
+
+impl BoxedTodayWriter__DI_Builder {
+    #[allow(non_snake_case)]
+    fn __di_build_BoxTodayWriter() -> BoxedTodayWriter {
+        let mut param_map : BTreeMap<ComponentIndex, Object> = BTreeMap::new(); // generated
+        let mut argument_map : BTreeMap<String, ComponentIndex> = BTreeMap::new();
+
+        // for each param of the struct
+        param_map.insert(ComponentIndex::String(get_type::<IOutput>().to_string()), Object::Component( Box::new(ConsoleOutput::new()) ) );
+        // param_map.insert(ComponentIndex::String(get_type::<IOutput>().to_string()), Object::Component( Box::new(Container::get_scope().resolve::<IOutput>()) ) );
+        argument_map.insert("output".to_string(), ComponentIndex::String(get_type::<IOutput>().to_string())); // generated from parameter name
+        
+        let tmp = param_map.remove(&argument_map["output"]).unwrap().as_component_owned().unwrap(); //Box<Object::Component>
+
+        BoxedTodayWriter {
+            output: unsafe { Box::new(*tmp.downcast_unchecked::<ConsoleOutput>()) },
+        }
+    }
+}
+// =======================================================================
+
+
+fn write_date() {
+    // Create the scope, resolve your IDateWriter,
+    // use it, then dispose of the scope.
+    // let writer = Container::get_scope().resolve::<IDateWriter>();
+
+    let writer = BoxedTodayWriter__DI_Builder::__di_build_BoxTodayWriter();
+    writer.write_date();
+}
+
+pub fn run(args: Vec<String>) -> Result<(), Box<Error>> {
+    // Create your builder.
+    let mut builder = ContainerBuilder::new();
+
+    builder.register_type::<ConsoleOutput>().as_type::<IOutput>();
+    builder.register_type::<BoxedTodayWriter>().as_type::<IDateWriter>();
+    builder.register_type::<GenericTodayWriter<ConsoleOutput>>().as_type::<IDateWriter>();
+    builder.build();
+
+    // The WriteDate method is where we'll make use
+    // of our dependency injection. We'll define that
+    // in a bit.
+    write_date();
     Ok(())
 }
