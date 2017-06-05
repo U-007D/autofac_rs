@@ -17,7 +17,7 @@ mod unit_tests;
 // happens, just that we can write.
 pub trait IOutput
 {
-    fn write(&self, content: String);
+    fn write<T: Into<String>>(&self, content: T);
 }
 
 // This implementation of the IOutput interface
@@ -28,8 +28,8 @@ pub struct ConsoleOutput;
 
 impl IOutput for ConsoleOutput
 {
-    fn write(&self, content: String) {
-        println!("{}", content);
+    fn write<T: Into<String>>(&self, content: T) {
+        println!("{}", content.into());
     }
 }
 
@@ -61,7 +61,7 @@ impl<T: IOutput> TodayWriter<T> {
 
 impl<T: IOutput> IDateWriter for TodayWriter<T> {
     fn write_date(&self) {
-        self.output.write("Today is June 4th, 2017".to_string())
+        self.output.write("Today is June 4th, 2017")
     }
 }
 
