@@ -65,10 +65,31 @@ impl<T: IOutput> IDateWriter for TodayWriter<T> {
     }
 }
 
-pub fn run(args: Vec<String>) -> result::Result<(), Box<error::Error>> {
-    let container = ContainerBuilder::new().register_type<ConsoleOutput>().as<IOutput>()
-                                           .register_type<TodayWriter>().as<IDateWriter>()
+pub fn run(_args: Vec<String>) -> result::Result<(), Box<error::Error>> {
+//    TodayWriter::new(ConsoleOutput).write_date();
+    let container = ContainerBuilder::new().register_type_as::<ConsoleOutput, IOutput>()
+                                           .register_type_as::<TodayWriter<IOutput>, IDateWriter>()
                                            .build();
-    container.resolve<IDateWriter>().write_date();
+    container.resolve::<IDateWriter>().write_date();
     Ok(())
+}
+
+pub struct ContainerBuilder;
+
+impl ContainerBuilder {
+    fn new() -> ContainerBuilder {
+        ContainerBuilder
+    }
+
+    fn register_type_as<T>(&self) -> Self {
+
+    }
+
+    fn build() -> Container { Container }
+}
+
+pub struct Container;
+
+impl Container {
+    fn resolve<T>() -> T {}
 }
